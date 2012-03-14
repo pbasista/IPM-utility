@@ -33,11 +33,11 @@ int print_short_usage (const char *argv0) {
 int print_help (const char *argv0) {
 	print_short_usage(argv0);
 	std::cout << "Additional options:\n"
-		"-v\t\t\tDisplays the number of character occurrences\n"
 		"-e <file_encoding>\tSpecifies the character encoding\n"
 		"\t\t\tof the input file 'filename'. The default value\n"
 		"\t\t\tis UTF-8. The valid encodings are all those\n"
-		"\t\t\tsupported by the iconv.\n";
+		"\t\t\tsupported by the iconv.\n"
+		"-v\t\t\tDisplays the number of character occurrences.\n";
 	return (0);
 }
 

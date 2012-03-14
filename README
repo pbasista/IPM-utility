@@ -1,0 +1,42 @@
+The IPM Utility
+===============
+
+A simple utility, which computes the inverse
+of the probability that any two arbitrarily chosen characters
+in the specified input file match.
+
+This utility is Unicode-aware, which means that
+it understands all the character encodings supported by the iconv
+and it can read the input file on character-by-character basis
+instead of standard byte-by-byte basis.
+
+This application provides a single executable:
+ipm	computes the inverse probability of matching
+	for the given input file
+
+Requirements:
+-------------
+
+For compiling:
+
+C++ compiler and libraries at least partially conforming
+to the 2011 ISO C++ standard (C++11), because of:
+	- the type unsigned long long
+
+and also at least partially conforming to the POSIX.1-2001 standard,
+because of:
+	- function iconv and related stuff
+	- function getopt and related stuff
+
+Compilation:
+------------
+
+It should be as easy as:
+
+make
+
+Usage:
+------
+
+Run the compiled executable without any parameters
+and follow the provided instructions.
