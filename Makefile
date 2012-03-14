@@ -4,6 +4,12 @@ PNAME := ipm
 # we need to define some basic variables
 CPP := c++
 
+# File extensions
+HDREXT := .hpp
+SRCEXT := .cpp
+OBJEXT := .o
+DEPEXT := .d
+
 HDRDIR := h
 SRCDIR := src
 OBJDIR := obj
@@ -22,10 +28,11 @@ LIBS :=
 endif
 
 AFLAGS := -O3 -Wall -Wextra -Wconversion -pedantic -g
-HEADERS := $(wildcard $(HDRDIR)/*.hpp)
-SOURCES := $(wildcard $(SRCDIR)/*.cpp)
-OBJECTS := $(addprefix $(OBJDIR)/,$(notdir $(SOURCES:.cpp=.o)))
-DEPENDENCIES := $(addprefix $(DEPDIR)/,$(notdir $(SOURCES:.cpp=.d)))
+HEADERS := $(wildcard $(HDRDIR)/*$(HDREXT))
+SOURCES := $(wildcard $(SRCDIR)/*$(SRCEXT))
+OBJECTS := $(addprefix $(OBJDIR)/,$(notdir $(SOURCES:$(SRCEXT)=$(OBJEXT))))
+DEPENDENCIES := $(addprefix $(DEPDIR)/,\
+	$(notdir $(SOURCES:$(SRCEXT)=$(DEPEXT))))
 
 .PHONY: clean
 
@@ -34,10 +41,11 @@ DEPENDENCIES := $(addprefix $(DEPDIR)/,$(notdir $(SOURCES:.cpp=.d)))
 all: $(DEPENDENCIES) $(OBJDIR) $(OBJECTS) $(ENAME)
 	@echo "$(PNAME) has been made"
 
-$(DEPENDENCIES): $(DEPDIR)/%.d: $(SRCDIR)/%.cpp
+$(DEPENDENCIES): $(DEPDIR)/%$(DEPEXT): $(SRCDIR)/%$(SRCEXT)
 	@echo "DEP $@"
 	@$(CPP) -MM -MT \
-		'$@ $(addprefix $(OBJDIR)/,$(subst .cpp,.o,$(notdir $<)))' \
+		'$@ $(addprefix $(OBJDIR)/,\
+		$(subst $(SRCEXT),$(OBJEXT),$(notdir $<)))' \
 		$(CFLAGS) $(AFLAGS) $< -o $@
 
 include $(DEPENDENCIES)

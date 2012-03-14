@@ -1,7 +1,7 @@
+#include "ipm.hpp"
+
 #include <cstdlib>
 #include <iostream>
-
-#include "ipm.hpp"
 
 /* helping function */
 
