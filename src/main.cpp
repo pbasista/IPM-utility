@@ -88,7 +88,8 @@ int print_usage (const char *argv0) {
  * @param
  * argv		the argument vector itself, or an array of argument strings
  *
- * @return	If the benchmark is successful or was not requested,
+ * @return	If the nverse probability of matching (IPM)
+ * 		has been successfully computed,
  * 		this function returns EXIT_SUCCESS.
  * 		Otherwise, this function returns EXIT_FAILURE.
  */
