@@ -135,7 +135,6 @@ int compute_ipm_from_file (const char *input_filename,
 		int display_character_occurrences,
 		long double *computed_ipm) {
 	int retval = 0;
-	int iconv_retval = 0;
 	int fd = 0;
 	/* the conversion descriptor used by the iconv */
 	iconv_t cd = NULL; /* iconv_t is just a typedef for void* */
@@ -150,6 +149,7 @@ int compute_ipm_from_file (const char *input_filename,
 	size_t wbuffer_size = 8388608 * sizeof (wchar_t); /* 8 Mi */
 	size_t bytes_read = 0;
 	size_t characters_read = 0;
+	size_t iconv_retval = 0;
 	unsigned long long total_characters_read = 0;
 	unsigned long long matching_pairs = 0;
 	unsigned long long numerator = 0;
