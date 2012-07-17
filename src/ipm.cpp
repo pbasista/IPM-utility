@@ -23,6 +23,7 @@
 #include <cerrno>
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
 #include <exception>
 #include <iconv.h>
 #include <iostream>
@@ -67,11 +68,12 @@ int text_file_read_buffer (int fd,
 	return (0); /* success */
 }
 
-int text_file_convert_buffer (iconv_t *cd,
+int text_file_convert_buffer (iconv_t cd,
 		size_t bytes_read,
 		char *buffer,
 		wchar_t *wbuffer,
 		size_t wbuffer_size,
+		size_t *bytes_unused,
 		size_t *characters_read) {
 	char *inbuf = buffer;
 	char *outbuf = (char *)(wbuffer);
@@ -83,14 +85,36 @@ int text_file_convert_buffer (iconv_t *cd,
 	 * we try to use iconv to convert the characters
 	 * in the input buffer to the characters in the output buffer
 	 */
-	retval = iconv((*cd), &inbuf, &inbytesleft,
+	retval = iconv(cd, &inbuf, &inbytesleft,
 			&outbuf, &outbytesleft);
 	/* if the iconv has encountered an error */
 	if (retval == (size_t)(-1)) {
-		perror("text_file_convert_buffer: iconv");
-		/* resetting the errno */
-		errno = 0;
-		return (1);
+		if (errno == EINVAL) { /* not really an error */
+			/*
+			 * An incomplete multi-byte sequence
+			 * has been encountered at the end
+			 * of the input buffer. We move it
+			 * to the beginning of the input buffer
+			 * for later processing.
+			 */
+			memmove(buffer, inbuf, inbytesleft);
+			(*bytes_unused) = inbytesleft;
+			/*
+			 * now we compute the number of characters,
+			 * which have just been converted
+			 * from the input buffer
+			 */
+			(*characters_read) = (outbytesleft_at_start -
+				outbytesleft) / sizeof (wchar_t);
+			/* resetting the errno */
+			errno = 0;
+			return (-1);
+		} else {
+			perror("text_file_convert_buffer: iconv");
+			/* resetting the errno */
+			errno = 0;
+			return (1);
+		}
 	} else if (retval > 0) {
 		std::cerr << "text_file_convert_buffer: iconv "
 			"converted " << retval << " characters\n"
@@ -106,6 +130,7 @@ int text_file_convert_buffer (iconv_t *cd,
 			"convert " << inbytesleft << " input bytes!\n";
 		return (3);
 	}
+	(*bytes_unused) = 0;
 	/*
 	 * now we compute the number of characters,
 	 * which have just been converted from the input buffer
@@ -148,6 +173,11 @@ int compute_ipm_from_file (const char *input_filename,
 	size_t buffer_size = 8388608; /* 8 Mi */
 	size_t wbuffer_size = 8388608 * sizeof (wchar_t); /* 8 Mi */
 	size_t bytes_read = 0;
+	/*
+	 * number of bytes unused in the last call
+	 * to the text_file_convert_buffer function
+	 */
+	size_t bytes_unused = 0;
 	size_t characters_read = 0;
 	size_t iconv_retval = 0;
 	unsigned long long total_characters_read = 0;
@@ -217,16 +247,19 @@ int compute_ipm_from_file (const char *input_filename,
 		internal_character_encoding << "'\n\n";
 	std::cout << "Computing the IPM\n";
 	do {
-		if ((retval = text_file_read_buffer(fd, buffer_size,
-						buffer, &bytes_read)) > 0) {
+		if ((retval = text_file_read_buffer(fd,
+						buffer_size - bytes_unused,
+						buffer + bytes_unused,
+						&bytes_read)) > 0) {
 			std::cerr << "Error: The call to the function\n"
 				"text_file_read_buffer"
 				" has not been successful.\n";
 			return (3);
 		}
-		if (text_file_convert_buffer(&cd, bytes_read, buffer,
-					wbuffer, wbuffer_size,
-					&characters_read) != 0) {
+		if (text_file_convert_buffer(cd, bytes_unused + bytes_read,
+					buffer, wbuffer, wbuffer_size,
+					&bytes_unused,
+					&characters_read) > 0) {
 			std::cerr << "Error: The call to the function\n"
 				"text_file_convert_buffer"
 				" has not been successful.\n";
@@ -247,6 +280,12 @@ int compute_ipm_from_file (const char *input_filename,
 			" has not been successful.\n";
 		return (6);
 	}
+	if (bytes_unused != (size_t)(0)) {
+		std::cerr << "Error: The last call to the function\n"
+			"text_file_convert_buffer"
+			" did not convert all the provided bytes.\n";
+		return (7);
+	}
 	std::cout << "Successfully computed!\n\n";
 	std::cout << "Total characters read:\t" << total_characters_read <<
 		std::endl << std::endl;
@@ -256,7 +295,7 @@ int compute_ipm_from_file (const char *input_filename,
 			perror("compute_ipm_from_file: iconv_close");
 			/* resetting the errno */
 			errno = 0;
-			return (7);
+			return (8);
 		}
 		/*
 		 * we suppose that the terminal is able to handle
@@ -268,7 +307,7 @@ int compute_ipm_from_file (const char *input_filename,
 			perror("compute_ipm_from_file: iconv_open");
 			/* resetting the errno */
 			errno = 0;
-			return (8);
+			return (9);
 		}
 	}
 	matching_pairs = 0;
@@ -303,13 +342,13 @@ int compute_ipm_from_file (const char *input_filename,
 				perror("compute_ipm_from_file: iconv");
 				/* resetting the errno */
 				errno = 0;
-				return (9);
+				return (10);
 			} else if (iconv_retval > 0) {
 				std::cerr << "compute_ipm_from_file: iconv "
 					"converted " << iconv_retval <<
 					" characters\n"
 					"in a nonreversible way!\n";
-				return (10);
+				return (11);
 			} else if (outbytesleft == 0) {
 				/*
 				 * all the characters expected to be read
@@ -319,7 +358,7 @@ int compute_ipm_from_file (const char *input_filename,
 				std::cerr << "compute_ipm_from_file: "
 					"iconv could not convert " <<
 					inbytesleft << " input bytes!\n";
-				return (11);
+				return (12);
 			}
 			std::clog << "'" << buffer << "'\t(" <<
 			(int)(it->first) << ")\t" <<
@@ -343,7 +382,7 @@ int compute_ipm_from_file (const char *input_filename,
 		perror("compute_ipm_from_file: iconv_close 2");
 		/* resetting the errno */
 		errno = 0;
-		return (12);
+		return (13);
 	}
 	try {
 		delete[] wbuffer;
