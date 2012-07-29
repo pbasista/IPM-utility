@@ -143,5 +143,5 @@ clean:
 	@echo "$(PNAME) cleaned"
 
 distclean:
-	@rm -vf $(ARCHIVE_NC) $(ARCHIVE_GZ)
+	@rm -vf $(ARCHIVE_NC) $(ARCHIVE_GZ) $(ARCHIVE_XZ)
 	@echo "distribution archives cleaned"
